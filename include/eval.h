@@ -75,14 +75,14 @@ static void eval_skip_spaces(eval_lexer* lxr) {
 
 static double eval_level1(eval_lexer* lxr);
 
-static double eval_level3(eval_lexer* lxr) {
+static double eval_level4(eval_lexer* lxr) {
   double ret = 0.0;
 
   eval_guard(lxr);
 
   if (eval_cur(lxr) == '-') {
     eval_shift_by(lxr, 1);
-    return -eval_level3(lxr);
+    return -eval_level4(lxr);
   }
   
   if (isdigit(eval_cur(lxr))) {
@@ -109,6 +109,34 @@ static double eval_level3(eval_lexer* lxr) {
   
   eval_error("unknown character", lxr);
   return 0.0;
+}
+
+static double eval_level3(eval_lexer* lxr) {
+  double ret = eval_level4(lxr);
+  
+  eval_guard(lxr);
+
+  eval_skip_spaces(lxr);
+
+  while (eval_cur(lxr) == '%') {
+    double tmp = 0.0;
+    long mod = 0.0;
+    
+    eval_shift_by(lxr, 1);
+    eval_skip_spaces(lxr);
+
+    tmp = eval_level4(lxr);
+    
+    if (tmp == 0.0) {
+      eval_error("division by zero", lxr);
+    }
+
+    mod = ret / tmp;
+
+    ret -= mod * tmp;
+  }
+
+  return ret;
 }
 
 static double eval_level2(eval_lexer* lxr) {
@@ -182,12 +210,12 @@ double eval(const char* expr) {
     ret = eval_level1(&lxr);
     if (*(lxr.ptr) != '\0') {
       fprintf(stderr, "eval: %d: unknown character\n", lxr.charno);
-      return 0.0;
+      return 0.0 / 0.0; /* NaN */
     }
 
     return ret;
   } else {
-    return 0.0;
+    return 0.0 / 0.0; /* NaN */
   }
 }
 
